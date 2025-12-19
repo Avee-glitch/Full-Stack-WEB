@@ -1,115 +1,87 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
 
-// ---------------- MOCK DATA ----------------
-
-let cases = [
-  {
-    id: "1",
-    title: "AI hiring bias against minorities",
-    category: "bias",
-    severity: "high",
-    status: "open",
-    description: "An AI hiring system showed bias against minority candidates.",
-    views: 123,
-    upvotes: 45,
-    createdAt: new Date()
-  },
-  {
-    id: "2",
-    title: "Facial recognition privacy violation",
-    category: "privacy",
-    severity: "critical",
-    status: "investigating",
-    description: "Facial recognition used without user consent.",
-    views: 98,
-    upvotes: 60,
-    createdAt: new Date()
-  }
-];
-
-// ---------------- HEALTH / STATUS ----------------
-
-router.get("/status", (req, res) => {
-  res.json({
-    app: "fullstack-render-app",
-    status: "running",
-    timestamp: new Date().toISOString()
+// 1. Health check
+router.get('/health', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    service: 'AI Harm Watch API'
   });
 });
 
-// ---------------- STATS ----------------
+// 2. Get cases (Frontend needs this!)
+router.get('/cases', (req, res) => {
+  const demoCases = [
+    {
+      id: 'case-1',
+      title: 'Algorithmic Bias in Hiring',
+      description: 'AI hiring tools discriminating against women',
+      category: 'bias',
+      severity: 'high',
+      status: 'verified',
+      views: 1243,
+      createdAt: '2024-01-15T10:30:00Z'
+    },
+    {
+      id: 'case-2',
+      title: 'Deepfake Political Manipulation',
+      description: 'AI-generated videos influencing elections',
+      category: 'deepfakes',
+      severity: 'critical',
+      status: 'verified',
+      views: 2156,
+      createdAt: '2024-02-01T09:15:00Z'
+    }
+  ];
+  
+  res.json({
+    success: true,
+    data: demoCases,
+    pagination: {
+      total: demoCases.length,
+      page: 1,
+      limit: 20,
+      totalPages: 1
+    }
+  });
+});
 
-router.get("/stats", (req, res) => {
+// 3. Get statistics (Frontend needs this!)
+router.get('/stats', (req, res) => {
   res.json({
     success: true,
     data: {
-      totalCases: cases.length,
-      totalUsers: 128,
-      totalEvidence: 56,
+      totalCases: 2,
+      totalUsers: 0,
+      totalEvidence: 0,
+      verifiedCases: 2,
+      pendingCases: 0,
       categoryDistribution: {
         bias: 1,
-        privacy: 1
+        deepfakes: 1,
+        surveillance: 0,
+        'job-loss': 0,
+        misinformation: 0
       }
     }
   });
 });
 
-// ---------------- GET CASES (PAGINATED) ----------------
-
-router.get("/cases", (req, res) => {
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 9;
-
-  const start = (page - 1) * limit;
-  const end = start + limit;
-
-  const paginatedCases = cases.slice(start, end);
-
-  res.json({
-    success: true,
-    data: paginatedCases,
-    pagination: {
-      page,
-      totalPages: Math.ceil(cases.length / limit),
-      totalItems: cases.length
-    }
-  });
-});
-
-// ---------------- GET CASE BY ID ----------------
-
-router.get("/cases/:id", (req, res) => {
-  const found = cases.find(c => c.id === req.params.id);
-
-  if (!found) {
-    return res.status(404).json({ error: "Case not found" });
-  }
-
-  found.views += 1;
-  res.json({ success: true, data: found });
-});
-
-// ---------------- CREATE CASE ----------------
-
-router.post("/cases", (req, res) => {
+// 4. Create new case
+router.post('/cases', (req, res) => {
   const newCase = {
-    id: String(cases.length + 1),
-    title: req.body.title,
-    category: req.body.category,
-    severity: req.body.severity || "low",
-    status: "open",
-    description: req.body.description,
+    id: 'case-' + Date.now(),
+    ...req.body,
+    status: 'pending',
     views: 0,
-    upvotes: 0,
-    createdAt: new Date()
+    createdAt: new Date().toISOString()
   };
-
-  cases.unshift(newCase);
-
-  res.json({
+  
+  res.status(201).json({
     success: true,
-    data: newCase
+    data: newCase,
+    message: 'Case submitted successfully!'
   });
 });
 
