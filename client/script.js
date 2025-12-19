@@ -1,10 +1,109 @@
-const API_BASE_URL=https://full-stack-render-app-o6yd.onrender.com/api/.location.origin,PAGE_SIZE=9;let currentState={user:null,token:localStorage.getItem("token"),cases:[],currentPage:1,totalPages:1,filters:{category:"",status:"",severity:""},stats:null,charts:{}};const elements={navLinks:document.querySelectorAll(".nav-link"),mobileMenuBtn:document.getElementById("mobileMenuBtn"),mobileMenu:document.getElementById("mobileMenu"),themeToggle:document.getElementById("themeToggle"),loginBtn:document.getElementById("loginBtn"),mobileLoginBtn:document.getElementById("mobileLoginBtn"),totalCases:document.getElementById("totalCases"),totalUsers:document.getElementById("totalUsers"),totalEvidence:document.getElementById("totalEvidence"),totalCountries:document.getElementById("totalCountries"),exploreBtn:document.getElementById("exploreBtn"),contributeBtn:document.getElementById("contributeBtn"),categoryFilter:document.getElementById("categoryFilter"),statusFilter:document.getElementById("statusFilter"),severityFilter:document.getElementById("severityFilter"),resetFilters:document.getElementById("resetFilters"),casesContainer:document.getElementById("casesContainer"),currentPage:document.getElementById("currentPage"),totalPages:document.getElementById("totalPages"),prevPage:document.getElementById("prevPage"),nextPage:document.getElementById("nextPage"),submitForm:document.getElementById("submitForm"),caseTitle:document.getElementById("caseTitle"),caseCategory:document.getElementById("caseCategory"),severity:document.getElementById("severity"),caseDescription:document.getElementById("caseDescription"),aiSystem:document.getElementById("aiSystem"),company:document.getElementById("company"),evidenceLinks:document.getElementById("evidenceLinks"),contentWarning:document.getElementById("contentWarning"),clearForm:document.getElementById("clearForm"),submitCase:document.getElementById("submitCase"),categoryChart:document.getElementById("categoryChart"),timelineChart:document.getElementById("timelineChart"),communityCount:document.getElementById("communityCount"),joinBtn:document.getElementById("joinBtn"),loginModal:document.getElementById("loginModal"),registerModal:document.getElementById("registerModal"),caseModal:document.getElementById("caseModal"),closeLogin:document.getElementById("closeLogin"),closeRegister:document.getElementById("closeRegister"),closeCaseModal:document.getElementById("closeCaseModal"),loginEmail:document.getElementById("loginEmail"),loginPassword:document.getElementById("loginPassword"),regUsername:document.getElementById("regUsername"),regEmail:document.getElementById("regEmail"),regPassword:document.getElementById("regPassword"),regConfirm:document.getElementById("regConfirm"),doLogin:document.getElementById("doLogin"),doRegister:document.getElementById("doRegister"),switchToRegister:document.getElementById("switchToRegister"),switchToLogin:document.getElementById("switchToLogin"),successToast:document.getElementById("successToast"),toastMessage:document.getElementById("toastMessage"),loadingOverlay:document.getElementById("loadingOverlay")};
-function showLoading(){elements.loadingOverlay.classList.add("active")}function hideLoading(){elements.loadingOverlay.classList.remove("active")}function showToast(e,t="success"){elements.toastMessage.textContent=e,elements.successToast.classList.remove("error"),"error"===t?(elements.successToast.classList.add("error"),elements.successToast.querySelector("i").className="fas fa-exclamation-circle"):elements.successToast.querySelector("i").className="fas fa-check-circle",elements.successToast.classList.add("show"),setTimeout(()=>{elements.successToast.classList.remove("show")},3e3)}function showError(e,t){const a=document.getElementById(e);a&&(a.textContent=t,a.classList.add("show"))}function clearError(e){const t=document.getElementById(e);t&&(t.textContent="",t.classList.remove("show"))}function formatDate(e){return new Date(e).toLocaleDateString("en-US",{year:"numeric",month:"short",day:"numeric"})}function truncateText(e,t=150){return e.length<=t?e:e.substring(0,t)+"..."}function getCategoryLabel(e){const t={bias:"Bias & Discrimination",privacy:"Privacy Violation",deepfakes:"Deepfakes",surveillance:"Surveillance","job-loss":"Job Loss",misinformation:"Misinformation",weapons:"Autonomous Weapons",security:"Security Vulnerabilities",other:"Other"};return t[e]||e}function getSeverityLabel(e){const t={low:"Low",medium:"Medium",high:"High",critical:"Critical"};return t[e]||e}
-async function fetchAPI(e,t={}){const a=`${API_BASE_URL}/api${e}`,o={...t.headers,"Content-Type":"application/json"};currentState.token&&(o.Authorization=`Bearer ${currentState.token}`);try{const r=await fetch(a,{...t,headers:o});if(!r.ok){if(401===r.status){localStorage.removeItem("token"),currentState.token=null,currentState.user=null,updateAuthUI()}const e=await r.json().catch(()=>({error:"Network error"}));throw new Error(e.error||`HTTP ${r.status}`)}return await r.json()}catch(e){console.error("API Error:",e),throw e}}async function loadStats(){try{const e=await fetchAPI("/stats");e.success&&(currentState.stats=e.data,updateStatsUI(),initCharts())}catch(e){console.error("Failed to load stats:",e)}}async function loadCases(e=1,t={}){showLoading();const a=new URLSearchParams({page:e,limit:PAGE_SIZE,...t});try{const e=await fetchAPI(`/cases?${a}`);e.success&&(currentState.cases=e.data,currentState.currentPage=e.pagination.page,currentState.totalPages=e.pagination.totalPages,updateCasesUI(),updatePaginationUI())}catch(e){console.error("Failed to load cases:",e),showToast("Failed to load cases","error")}finally{hideLoading()}}async function loadCaseDetails(e){showLoading();try{const t=await fetchAPI(`/cases/${e}`);t.success&&showCaseModal(t.data)}catch(e){console.error("Failed to load case details:",e),showToast("Failed to load case details","error")}finally{hideLoading()}}async function submitCase(e){showLoading();try{const t=await fetchAPI("/cases",{method:"POST",body:JSON.stringify(e)});t.success&&(showToast("Case submitted successfully! It will be reviewed by the community."),clearSubmitForm(),loadCases(currentState.currentPage,currentState.filters),loadStats())}catch(e){console.error("Failed to submit case:",e),showToast(e.message||"Failed to submit case","error")}finally{hideLoading()}}async function registerUser(e){showLoading();try{const t=await fetchAPI("/auth/register",{method:"POST",body:JSON.stringify(e)});t.success&&(localStorage.setItem("token",t.data.token),currentState.token=t.data.token,currentState.user=t.data.user,updateAuthUI(),hideModal(elements.registerModal),showToast("Registration successful! Welcome to AI Harm Watch."))}catch(e){console.error("Registration failed:",e),showToast(e.message||"Registration failed","error")}finally{hideLoading()}}async function loginUser(e){showLoading();try{const t=await fetchAPI("/auth/login",{method:"POST",body:JSON.stringify(e)});t.success&&(localStorage.setItem("token",t.data.token),currentState.token=t.data.token,currentState.user=t.data.user,updateAuthUI(),hideModal(elements.loginModal),showToast("Login successful!"))}catch(e){console.error("Login failed:",e),showToast(e.message||"Login failed","error")}finally{hideLoading()}}async function getUserProfile(){if(!currentState.token)return;try{const e=await fetchAPI("/auth/me");e.success&&(currentState.user=e.data,updateAuthUI())}catch(e){console.error("Failed to fetch user profile:",e)}}
-function updateStatsUI(){if(!currentState.stats)return;const e=currentState.stats;elements.totalCases&&(elements.totalCases.textContent=e.totalCases.toLocaleString()),elements.totalUsers&&(elements.totalUsers.textContent=e.totalUsers.toLocaleString()),elements.totalEvidence&&(elements.totalEvidence.textContent=e.totalEvidence.toLocaleString()),elements.totalCountries&&(elements.totalCountries.textContent="42"),elements.communityCount&&(elements.communityCount.textContent=`${e.totalUsers.toLocaleString()}+ contributors`)}function updateCasesUI(){if(!currentState.cases||0===currentState.cases.length)return void(elements.casesContainer.innerHTML=`<div class="no-cases" style="grid-column:1/-1;text-align:center;padding:3rem"><i class="fas fa-inbox" style="font-size:3rem;color:var(--gray);margin-bottom:1rem"></i><h3>No cases found</h3><p>Try adjusting your filters or submit a new case!</p></div>`);elements.casesContainer.innerHTML=currentState.cases.map(e=>`<div class="case-card" data-case-id="${e.id}"><div class="case-image ${"critical"===e.severity?"warning":""}"><i class="fas fa-robot"></i></div><div class="case-content"><div class="case-header"><span class="case-category">${getCategoryLabel(e.category)}</span><span class="case-status ${e.status}">${e.status}</span></div><h3 class="case-title">${e.title}</h3><p class="case-description">${truncateText(e.description)}</p><div class="case-meta"><div class="case-severity"><span class="severity-dot ${e.severity}"></span><span>${getSeverityLabel(e.severity)}</span></div><div class="case-views"><i class="fas fa-eye"></i><span>${e.views.toLocaleString()}</span></div></div></div></div>`).join(""),document.querySelectorAll(".case-card").forEach(e=>{e.addEventListener("click",()=>{const t=e.dataset.caseId;loadCaseDetails(t)})})}function updatePaginationUI(){elements.currentPage.textContent=currentState.currentPage,elements.totalPages.textContent=currentState.totalPages,elements.prevPage.disabled=currentState.currentPage<=1,elements.nextPage.disabled=currentState.currentPage>=currentState.totalPages}function updateAuthUI(){const e=!!currentState.user;e?(elements.loginBtn.innerHTML=`<i class="fas fa-user"></i> ${currentState.user.username}`,elements.mobileLoginBtn.innerHTML=`<i class="fas fa-user"></i> ${currentState.user.username}`):(elements.loginBtn.innerHTML='<i class="fas fa-sign-in-alt"></i> Sign In',elements.mobileLoginBtn.innerHTML='<i class="fas fa-sign-in-alt"></i> Sign In')}
-function showCaseModal(e){const t=document.getElementById("caseModalBody");t.innerHTML=`<div class="case-details"><div class="case-header"><div class="case-meta-info"><span class="case-category">${getCategoryLabel(e.category)}</span><span class="case-status ${e.status}">${e.status}</span><span class="case-severity"><span class="severity-dot ${e.severity}"></span>${getSeverityLabel(e.severity)}</span></div><div class="case-stats"><span><i class="fas fa-eye"></i> ${e.views.toLocaleString()} views</span><span><i class="fas fa-thumbs-up"></i> ${e.upvotes} upvotes</span><span><i class="fas fa-calendar"></i> ${formatDate(e.createdAt)}</span></div></div><h4>Description</h4><p class="case-description-full">${e.description}</p>${e.detailedDescription?`<h4>Detailed Description</h4><p>${e.detailedDescription}</p>`:""}${e.aiSystem?`<h4>AI System Involved</h4><p>${e.aiSystem}</p>`:""}${e.company?`<h4>Company/Organization</h4><p>${e.company}</p>`:""}${e.country?`<h4>Location</h4><p>${e.country}</p>`:""}${e.evidence&&e.evidence.length>0?`<h4>Evidence</h4><div class="evidence-list">${e.evidence.map(e=>`<div class="evidence-item"><strong>${e.title}</strong><p>${e.description}</p><small>Type: ${e.type} | Status: ${e.verificationStatus}</small></div>`).join("")}</div>`:""}</div>`,document.getElementById("caseModalTitle").textContent=e.title,showModal(elements.caseModal)}
-function initCharts(){if(!currentState.stats)return;Object.values(currentState.charts).forEach(e=>{e&&e.destroy()});const e=elements.categoryChart.getContext("2d"),t=Object.keys(currentState.stats.categoryDistribution),a=Object.values(currentState.stats.categoryDistribution),o=generateColors(t.length);currentState.charts.categoryChart=new Chart(e,{type:"pie",data:{labels:t.map(getCategoryLabel),datasets:[{data:a,backgroundColor:o,borderWidth:1}]},options:{responsive:!0,maintainAspectRatio:!1,plugins:{legend:{position:"right",labels:{color:getComputedStyle(document.documentElement).getPropertyValue("--light")}},title:{display:!1}}}});const r=elements.timelineChart.getContext("2d"),n=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],l=n.map(()=>Math.floor(10*Math.random())+10);currentState.charts.timelineChart=new Chart(r,{type:"line",data:{labels:n,datasets:[{label:"Cases Reported",data:l,borderColor:getComputedStyle(document.documentElement).getPropertyValue("--primary"),backgroundColor:"rgba(220, 38, 38, 0.1)",borderWidth:2,fill:!0,tension:.4}]},options:{responsive:!0,maintainAspectRatio:!1,plugins:{legend:{labels:{color:getComputedStyle(document.documentElement).getPropertyValue("--light")}}},scales:{x:{grid:{color:"rgba(255, 255, 255, 0.1)"},ticks:{color:getComputedStyle(document.documentElement).getPropertyValue("--light")}},y:{grid:{color:"rgba(255, 255, 255, 0.1)"},ticks:{color:getComputedStyle(document.documentElement).getPropertyValue("--light")}}}}})}function generateColors(e){const t=[];for(let a=0;a<e;a++){const e=(a*(360/e))%360;t.push(`hsl(${e}, 70%, 60%)`)}return t}function showModal(e){e.classList.add("active"),document.body.style.overflow="hidden"}function hideModal(e){e.classList.remove("active"),document.body.style.overflow=""}function hideAllModals(){hideModal(elements.loginModal),hideModal(elements.registerModal),hideModal(elements.caseModal)}
-function validateSubmitForm(){let e=!0;return clearError("titleError"),clearError("categoryError"),clearError("descriptionError"),!elements.caseTitle.value.trim()&&(showError("titleError","Title is required"),e=!1),!elements.caseCategory.value&&(showError("categoryError","Category is required"),e=!1),!elements.caseDescription.value.trim()&&(showError("descriptionError","Description is required"),e=!1),e}function clearSubmitForm(){elements.submitForm.reset(),clearError("titleError"),clearError("categoryError"),clearError("descriptionError")}
-function setupEventListeners(){elements.navLinks.forEach(e=>{e.addEventListener("click",t=>{t.preventDefault();const a=e.getAttribute("href").substring(1),o=document.getElementById(a);o&&(window.scrollTo({top:o.offsetTop-80,behavior:"smooth"}),elements.navLinks.forEach(e=>e.classList.remove("active")),e.classList.add("active"))})}),elements.mobileMenuBtn.addEventListener("click",()=>{elements.mobileMenu.classList.toggle("active")}),elements.themeToggle.addEventListener("click",()=>{const e=document.documentElement.getAttribute("data-theme"),t="light"===e?"dark":"light";document.documentElement.setAttribute("data-theme",t),localStorage.setItem("theme",t),elements.themeToggle.innerHTML="light"===t?'<i class="fas fa-sun"></i>':'<i class="fas fa-moon"></i>'}),elements.loginBtn.addEventListener("click",()=>showModal(elements.loginModal)),elements.mobileLoginBtn.addEventListener("click",()=>showModal(elements.loginModal)),elements.closeLogin.addEventListener("click",()=>hideModal(elements.loginModal)),elements.closeRegister.addEventListener("click",()=>hideModal(elements.registerModal)),elements.switchToRegister.addEventListener("click",e=>{e.preventDefault(),hideModal(elements.loginModal),showModal(elements.registerModal)}),elements.switchToLogin.addEventListener("click",e=>{e.preventDefault(),hideModal(elements.registerModal),showModal(elements.loginModal)}),elements.closeCaseModal.addEventListener("click",()=>hideModal(elements.caseModal)),document.addEventListener("click",e=>{e.target.classList.contains("modal")&&hideAllModals()}),document.addEventListener("keydown",e=>{"Escape"===e.key&&hideAllModals()}),elements.doLogin.addEventListener("click",async()=>{const e=elements.loginEmail.value.trim(),t=elements.loginPassword.value;e&&t?await loginUser({email:e,password:t}):showToast("Please fill in all fields","error")}),elements.doRegister.addEventListener("click",async()=>{const e=elements.regUsername.value.trim(),t=elements.regEmail.value.trim(),a=elements.regPassword.value,o=elements.regConfirm.value;if(!e||!t||!a||!o)return void showToast("Please fill in all fields","error");if(a!==o)return void showToast("Passwords do not match","error");if(a.length<6)return void showToast("Password must be at least 6 characters","error");await registerUser({username:e,email:t,password:a})}),elements.categoryFilter.addEventListener("change",updateFilters),elements.statusFilter.addEventListener("change",updateFilters),elements.severityFilter.addEventListener("change",updateFilters),elements.resetFilters.addEventListener("click",resetFilters),elements.prevPage.addEventListener("click",()=>{currentState.currentPage>1&&loadCases(currentState.currentPage-1,currentState.filters)}),elements.nextPage.addEventListener("click",()=>{currentState.currentPage<currentState.totalPages&&loadCases(currentState.currentPage+1,currentState.filters)}),elements.submitForm.addEventListener("submit",async e=>{e.preventDefault();if(!validateSubmitForm())return;if(!currentState.user)return showToast("Please sign in to submit a case","error"),void showModal(elements.loginModal);const t={title:elements.caseTitle.value.trim(),category:elements.caseCategory.value,severity:elements.severity.value,description:elements.caseDescription.value.trim(),aiSystem:elements.aiSystem.value.trim(),company:elements.company.value.trim(),detailedDescription:elements.evidenceLinks.value.trim()};await submitCase(t)}),elements.clearForm.addEventListener("click",clearSubmitForm),elements.exploreBtn.addEventListener("click",()=>{document.getElementById("cases").scrollIntoView({behavior:"smooth"})}),elements.contributeBtn.addEventListener("click",()=>{document.getElementById("submit").scrollIntoView({behavior:"smooth"})}),elements.joinBtn.addEventListener("click",()=>{showModal(elements.registerModal)})}
-function updateFilters(){currentState.filters={category:elements.categoryFilter.value,status:elements.statusFilter.value,severity:elements.severityFilter.value},loadCases(1,currentState.filters)}function resetFilters(){elements.categoryFilter.value="",elements.statusFilter.value="",elements.severityFilter.value="",updateFilters()}
-async function init(){const e=localStorage.getItem("theme")||"dark";document.documentElement.setAttribute("data-theme",e),elements.themeToggle.innerHTML="light"===e?'<i class="fas fa-sun"></i>':'<i class="fas fa-moon"></i>',currentState.token&&await getUserProfile(),await Promise.all([loadCases(),loadStats()]),setupEventListeners();try{await fetchAPI("/health")}catch(e){console.warn("API health check failed:",e),showToast("API connection issue - some features may be limited","warning")}}document.addEventListener("DOMContentLoaded",init);
+// 🔥 BACKEND URL (FIXED)
+const API_BASE_URL = "https://full-stack-render-app-o6yd.onrender.com";
+const PAGE_SIZE = 9;
+
+let currentState = {
+  user: null,
+  token: localStorage.getItem("token"),
+  cases: [],
+  currentPage: 1,
+  totalPages: 1,
+  filters: { category: "", status: "", severity: "" },
+  stats: null,
+  charts: {}
+};
+
+const elements = {
+  navLinks: document.querySelectorAll(".nav-link"),
+  mobileMenuBtn: document.getElementById("mobileMenuBtn"),
+  mobileMenu: document.getElementById("mobileMenu"),
+  themeToggle: document.getElementById("themeToggle"),
+  loginBtn: document.getElementById("loginBtn"),
+  mobileLoginBtn: document.getElementById("mobileLoginBtn"),
+  totalCases: document.getElementById("totalCases"),
+  totalUsers: document.getElementById("totalUsers"),
+  totalEvidence: document.getElementById("totalEvidence"),
+  totalCountries: document.getElementById("totalCountries"),
+  exploreBtn: document.getElementById("exploreBtn"),
+  contributeBtn: document.getElementById("contributeBtn"),
+  categoryFilter: document.getElementById("categoryFilter"),
+  statusFilter: document.getElementById("statusFilter"),
+  severityFilter: document.getElementById("severityFilter"),
+  resetFilters: document.getElementById("resetFilters"),
+  casesContainer: document.getElementById("casesContainer"),
+  currentPage: document.getElementById("currentPage"),
+  totalPages: document.getElementById("totalPages"),
+  prevPage: document.getElementById("prevPage"),
+  nextPage: document.getElementById("nextPage"),
+  submitForm: document.getElementById("submitForm"),
+  caseTitle: document.getElementById("caseTitle"),
+  caseCategory: document.getElementById("caseCategory"),
+  severity: document.getElementById("severity"),
+  caseDescription: document.getElementById("caseDescription"),
+  aiSystem: document.getElementById("aiSystem"),
+  company: document.getElementById("company"),
+  evidenceLinks: document.getElementById("evidenceLinks"),
+  contentWarning: document.getElementById("contentWarning"),
+  clearForm: document.getElementById("clearForm"),
+  submitCase: document.getElementById("submitCase"),
+  categoryChart: document.getElementById("categoryChart"),
+  timelineChart: document.getElementById("timelineChart"),
+  communityCount: document.getElementById("communityCount"),
+  joinBtn: document.getElementById("joinBtn"),
+  loginModal: document.getElementById("loginModal"),
+  registerModal: document.getElementById("registerModal"),
+  caseModal: document.getElementById("caseModal"),
+  closeLogin: document.getElementById("closeLogin"),
+  closeRegister: document.getElementById("closeRegister"),
+  closeCaseModal: document.getElementById("closeCaseModal"),
+  loginEmail: document.getElementById("loginEmail"),
+  loginPassword: document.getElementById("loginPassword"),
+  regUsername: document.getElementById("regUsername"),
+  regEmail: document.getElementById("regEmail"),
+  regPassword: document.getElementById("regPassword"),
+  regConfirm: document.getElementById("regConfirm"),
+  doLogin: document.getElementById("doLogin"),
+  doRegister: document.getElementById("doRegister"),
+  switchToRegister: document.getElementById("switchToRegister"),
+  switchToLogin: document.getElementById("switchToLogin"),
+  successToast: document.getElementById("successToast"),
+  toastMessage: document.getElementById("toastMessage"),
+  loadingOverlay: document.getElementById("loadingOverlay")
+};
+
+// ===================== API CORE =====================
+
+async function fetchAPI(endpoint, options = {}) {
+  const url = `${API_BASE_URL}/api${endpoint}`;
+
+  const headers = {
+    "Content-Type": "application/json",
+    ...(options.headers || {})
+  };
+
+  if (currentState.token) {
+    headers.Authorization = `Bearer ${currentState.token}`;
+  }
+
+  const res = await fetch(url, { ...options, headers });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Network error" }));
+    throw new Error(err.error || `HTTP ${res.status}`);
+  }
+
+  return res.json();
+}
+
+// ===================== INIT =====================
+
+async function init() {
+  try {
+    await fetchAPI("/status");
+    console.log("✅ Backend connected");
+  } catch (err) {
+    console.error("❌ Backend connection failed", err);
+  }
+}
+
+document.addEventListener("DOMContentLoaded", init);
