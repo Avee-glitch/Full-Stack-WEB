@@ -1,3 +1,5 @@
+const express = require('express');
+const router = express.Router();
 router.get('/stats', (req, res) => {
   const categoryDistribution = {};
   let verifiedCases = 0;
