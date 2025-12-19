@@ -1,1 +1,35 @@
-
+[
+  {
+    "id": "evid-001",
+    "caseId": "case-001",
+    "title": "Research paper on hiring bias",
+    "description": "Academic study demonstrating systematic bias in AI hiring tools",
+    "type": "document",
+    "url": "https://example.com/research-paper.pdf",
+    "uploaderId": "user-002",
+    "verificationStatus": "verified",
+    "createdAt": "2024-01-16T11:20:00Z"
+  },
+  {
+    "id": "evid-002",
+    "caseId": "case-002",
+    "title": "Deepfake analysis report",
+    "description": "Technical analysis of the deepfake videos used in elections",
+    "type": "analysis",
+    "url": "https://example.com/deepfake-analysis.pdf",
+    "uploaderId": "user-001",
+    "verificationStatus": "verified",
+    "createdAt": "2024-02-02T10:15:00Z"
+  },
+  {
+    "id": "evid-003",
+    "caseId": "case-003",
+    "title": "UN investigation report",
+    "description": "United Nations report on autonomous weapon casualties",
+    "type": "document",
+    "url": "https://example.com/un-report.pdf",
+    "uploaderId": "user-002",
+    "verificationStatus": "verified",
+    "createdAt": "2024-01-26T14:45:00Z"
+  }
+]
